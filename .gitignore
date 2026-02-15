@@ -1,8 +1,3 @@
-vendor/
 .env
-.DS_Store
-Thumbs.db
-*.log
-.idea/
-.vscode/
-node_modules/
+config.php
+local/
