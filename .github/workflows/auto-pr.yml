@@ -1,0 +1,61 @@
+name: Auto PR and Deploy
+
+on:
+  push:
+    branches:
+      - develop
+      - dev
+      - feature/*
+      - main
+
+jobs:
+  create-pr:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      contents: read
+    if: github.ref != 'refs/heads/main'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: 'Auto: Merge ${{ github.ref_name }} into main'
+          title: 'Auto PR: Merge ${{ github.ref_name }} into main'
+          body: |
+            ## Автоматический pull request
+            Создан автоматически при пуше в ветку `${{ github.ref_name }}`.
+            
+            **Коммиты:** ${{ github.event.head_commit.message }}
+          branch: auto-pr-${{ github.ref_name }}-${{ github.run_number }}
+          delete-branch: true
+          base: main
+
+  deploy:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to Host via SSH
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.SSH_KEY }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          script: |
+            cd ${{ secrets.DEPLOY_PATH }}
+            git pull origin main
+            # Здесь можно добавить дополнительные команды:
+            # php composer.phar install
+            # npm install && npm run build
+            echo "✅ Деплой завершен успешно!"
